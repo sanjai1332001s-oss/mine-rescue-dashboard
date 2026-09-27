@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Mine Rescue AI - Live Monitoring</title>
+
+
+    <!-- MQTT.js -->
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                #071018;
+
+            color: white;
+
+        }
+
+
+        /* =========================
+           HEADER
+        ========================== */
+
+        header {
+
+            background:
+                #101b27;
+
+            padding:
+                25px 35px;
+
+            border-bottom:
+                1px solid #273746;
+
+        }
+
+
+        header h1 {
+
+            margin: 0 0 8px 0;
+
+            font-size: 28px;
+
+        }
+
+
+        header p {
+
+            margin: 0;
+
+            color:
+                #94a4b3;
+
+        }
+
+
+        .connection {
+
+            margin-top: 15px;
+
+            font-weight: bold;
+
+        }
+
+
+        .connected {
+
+            color:
+                #00d084;
+
+        }
+
+
+        .disconnected {
+
+            color:
+                #ff4d4d;
+
+        }
+
+
+        /* =========================
+           MAIN
+        ========================== */
+
+        .container {
+
+            max-width:
+                1200px;
+
+            margin:
+                auto;
+
+            padding:
+                30px;
+
+        }
+
+
+        .title {
+
+            margin-bottom:
+                20px;
+
+        }
+
+
+        .title h2 {
+
+            margin:
+                0 0 5px 0;
+
+        }
+
+
+        .title p {
+
+            color:
+                #8998a7;
+
+        }
+
+
+        /* =========================
+           SENSOR GRID
+        ========================== */
+
+        .sensor-grid {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(220px, 1fr)
+                );
+
+            gap:
+                18px;
+
+        }
+
+
+        .card {
+
+            background:
+                #101b27;
+
+            border:
+                1px solid #273746;
+
+            border-radius:
+                14px;
+
+            padding:
+                22px;
+
+        }
+
+
+        .card-title {
+
+            color:
+                #94a4b3;
+
+            font-size:
+                14px;
+
+            margin-bottom:
+                10px;
+
+        }
+
+
+        .value {
+
+            font-size:
+                32px;
+
+            font-weight:
+                bold;
+
+        }
+
+
+        .unit {
+
+            font-size:
+                16px;
+
+            color:
+                #94a4b3;
+
+        }
+
+
+        .description {
+
+            margin-top:
+                8px;
+
+            color:
+                #687888;
+
+            font-size:
+                12px;
+
+        }
+
+
+        /* =========================
+           ALERT
+        ========================== */
+
+        .alert-section {
+
+            margin-top:
+                30px;
+
+        }
+
+
+        .alert-box {
+
+            padding:
+                16px;
+
+            border-radius:
+                10px;
+
+            margin-bottom:
+                10px;
+
+            background:
+                #35191d;
+
+            border:
+                1px solid #8f3038;
+
+            color:
+                #ff7777;
+
+            font-weight:
+                bold;
+
+        }
+
+
+        .safe-box {
+
+            padding:
+                16px;
+
+            border-radius:
+                10px;
+
+            background:
+                #10271e;
+
+            border:
+                1px solid #1e6848;
+
+            color:
+                #4de49a;
+
+            font-weight:
+                bold;
+
+        }
+
+
+        /* =========================
+           FOOTER
+        ========================== */
+
+        footer {
+
+            text-align:
+                center;
+
+            padding:
+                30px;
+
+            color:
+                #657583;
+
+            font-size:
+                13px;
+
+        }
+
+
+        /* =========================
+           MOBILE
+        ========================== */
+
+        @media (
+            max-width: 600px
+        ) {
+
+            .container {
+
+                padding:
+                    18px;
+
+            }
+
+
+            header {
+
+                padding:
+                    20px;
+
+            }
+
+
+            header h1 {
+
+                font-size:
+                    22px;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- =====================================================
+     HEADER
+====================================================== -->
+
+<header>
+
+    <h1>
+        ⛑ Mine Rescue AI
+    </h1>
+
+    <p>
+        Underground Mine Safety & Monitoring System
+    </p>
+
+
+    <div
+        id="mqttStatus"
+        class="connection disconnected"
+    >
+
+        ● MQTT DISCONNECTED
+
+    </div>
+
+</header>
+
+
+
+<!-- =====================================================
+     MAIN
+====================================================== -->
+
+<div class="container">
+
+
+    <div class="title">
+
+        <h2>
+            Live Sensor Monitoring
+        </h2>
+
+        <p>
+            Real-time data from Mine Rescue Rover
+        </p>
+
+    </div>
+
+
+
+    <!-- =================================================
+         SENSOR CARDS
+    ================================================== -->
+
+    <div class="sensor-grid">
+
+
+        <!-- Temperature -->
+
+        <div class="card">
+
+            <div class="card-title">
+                🌡 Temperature
+            </div>
+
+            <div class="value">
+
+                <span id="temperature">
+                    --
+                </span>
+
+                <span class="unit">
+                    °C
+                </span>
+
+            </div>
+
+            <div class="description">
+                DHT11
+            </div>
+
+        </div>
+
+
+
+        <!-- Humidity -->
+
+        <div class="card">
+
+            <div class="card-title">
+                💧 Humidity
+            </div>
+
+            <div class="value">
+
+                <span id="humidity">
+                    --
+                </span>
+
+                <span class="unit">
+                    %
+                </span>
+
+            </div>
+
+            <div class="description">
+                DHT11
+            </div>
+
+        </div>
+
+
+
+        <!-- MQ2 -->
+
+        <div class="card">
+
+            <div class="card-title">
+                🔥 MQ-2
+            </div>
+
+            <div
+                class="value"
+                id="mq2"
+            >
+                --
+            </div>
+
+            <div class="description">
+                Smoke / Combustible Gas
+            </div>
+
+        </div>
+
+
+
+        <!-- MQ5 -->
+
+        <div class="card">
+
+            <div class="card-title">
+                ⛽ MQ-5
+            </div>
+
+            <div
+                class="value"
+                id="mq5"
+            >
+                --
+            </div>
+
+            <div class="description">
+                LPG / Natural Gas
+            </div>
+
+        </div>
+
+
+
+        <!-- MQ8 -->
+
+        <div class="card">
+
+            <div class="card-title">
+                ⚠️ MQ-8
+            </div>
+
+            <div
+                class="value"
+                id="mq8"
+            >
+                --
+            </div>
+
+            <div class="description">
+                Hydrogen
+            </div>
+
+        </div>
+
+
+
+        <!-- MQ135 -->
+
+        <div class="card">
+
+            <div class="card-title">
+                🌫 MQ-135
+            </div>
+
+            <div
+                class="value"
+                id="mq135"
+            >
+                --
+            </div>
+
+            <div class="description">
+                Air Quality
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =================================================
+         ALERTS
+    ================================================== -->
+
+    <div class="alert-section">
+
+        <h2>
+            Safety Alerts
+        </h2>
+
+
+        <div id="alerts">
+
+            <div class="safe-box">
+
+                ✓ WAITING FOR SENSOR DATA
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+
+<footer>
+
+    Mechtrobotics Pvt Ltd |
+    Mine Rescue AI Monitoring
+
+</footer>
+
+
+
+<!-- =====================================================
+     MQTT JAVASCRIPT
+====================================================== -->
+
+<script>
+
+
+// =====================================================
+// HIVEMQ CONFIGURATION
+// =====================================================
+
+// Example:
+// abc123def.s1.eu.hivemq.cloud
+
+const MQTT_HOST =
+    "8db55056bceb49eebf7115a0ea48d05c.s1.eu.hivemq.cloud";
+
+
+// HiveMQ MQTT WebSocket secure port
+
+const MQTT_PORT = 8884;
+
+
+// IMPORTANT:
+// Create a separate restricted user
+// for this public dashboard.
+
+const MQTT_USERNAME =
+    "mine/rescue/rover01/sensors";
+
+
+const MQTT_PASSWORD =
+    "12345678";
+
+
+// Same topic used by app.py
+
+const MQTT_TOPIC =
+    "mine/rescue/rover01/sensors";
+
+
+// =====================================================
+// MQTT WSS URL
+// =====================================================
+
+const MQTT_URL =
+    "wss://" +
+    MQTT_HOST +
+    ":" +
+    MQTT_PORT +
+    "/mqtt";
+
+
+console.log(
+    "Connecting to:",
+    MQTT_URL
+);
+
+
+// =====================================================
+// MQTT CONNECTION
+// =====================================================
+
+const client =
+    mqtt.connect(
+        MQTT_URL,
+        {
+
+            username:
+                MQTT_USERNAME,
+
+            password:
+                MQTT_PASSWORD,
+
+            clean:
+                true,
+
+            reconnectPeriod:
+                3000,
+
+            connectTimeout:
+                10000
+
+        }
+    );
+
+
+// =====================================================
+// CONNECT
+// =====================================================
+
+client.on(
+    "connect",
+    function()
+    {
+
+        console.log(
+            "Connected to HiveMQ"
+        );
+
+
+        const status =
+            document.getElementById(
+                "mqttStatus"
+            );
+
+
+        status.textContent =
+            "● MQTT CONNECTED";
+
+
+        status.className =
+            "connection connected";
+
+
+        // Subscribe
+
+        client.subscribe(
+            MQTT_TOPIC,
+            function(error)
+            {
+
+                if (error)
+                {
+
+                    console.error(
+                        "Subscribe error:",
+                        error
+                    );
+
+                }
+
+                else
+                {
+
+                    console.log(
+                        "Subscribed:",
+                        MQTT_TOPIC
+                    );
+
+                }
+
+            }
+        );
+
+    }
+);
+
+
+// =====================================================
+// RECEIVE DATA
+// =====================================================
+
+client.on(
+    "message",
+    function(topic, message)
+    {
+
+        console.log(
+            "MQTT:",
+            topic
+        );
+
+
+        try
+        {
+
+            const data =
+                JSON.parse(
+                    message.toString()
+                );
+
+
+            console.log(
+                "Sensor data:",
+                data
+            );
+
+
+            // =============================================
+            // TEMPERATURE
+            // =============================================
+
+            document.getElementById(
+                "temperature"
+            ).textContent =
+                Number(
+                    data.temperature
+                ).toFixed(1);
+
+
+            // =============================================
+            // HUMIDITY
+            // =============================================
+
+            document.getElementById(
+                "humidity"
+            ).textContent =
+                Number(
+                    data.humidity
+                ).toFixed(1);
+
+
+            // =============================================
+            // MQ2
+            // =============================================
+
+            document.getElementById(
+                "mq2"
+            ).textContent =
+                data.mq2;
+
+
+            // =============================================
+            // MQ5
+            // =============================================
+
+            document.getElementById(
+                "mq5"
+            ).textContent =
+                data.mq5;
+
+
+            // =============================================
+            // MQ8
+            // =============================================
+
+            document.getElementById(
+                "mq8"
+            ).textContent =
+                data.mq8;
+
+
+            // =============================================
+            // MQ135
+            // =============================================
+
+            document.getElementById(
+                "mq135"
+            ).textContent =
+                data.mq135;
+
+
+            // =============================================
+            // ALERTS
+            // =============================================
+
+            updateAlerts(data);
+
+        }
+
+        catch(error)
+        {
+
+            console.error(
+                "JSON error:",
+                error
+            );
+
+        }
+
+    }
+);
+
+
+// =====================================================
+// ALERT SYSTEM
+// =====================================================
+
+function updateAlerts(data)
+{
+
+    let alerts = [];
+
+
+    // Temperature
+
+    if (
+        Number(data.temperature) > 45
+    )
+    {
+
+        alerts.push(
+            "HIGH TEMPERATURE"
+        );
+
+    }
+
+
+    // MQ2
+
+    if (
+        Number(data.mq2) > 2000
+    )
+    {
+
+        alerts.push(
+            "MQ2 GAS / SMOKE HIGH"
+        );
+
+    }
+
+
+    // MQ5
+
+    if (
+        Number(data.mq5) > 2000
+    )
+    {
+
+        alerts.push(
+            "MQ5 GAS LEVEL HIGH"
+        );
+
+    }
+
+
+    // MQ8
+
+    if (
+        Number(data.mq8) > 2000
+    )
+    {
+
+        alerts.push(
+            "MQ8 HYDROGEN LEVEL HIGH"
+        );
+
+    }
+
+
+    // MQ135
+
+    if (
+        Number(data.mq135) > 2000
+    )
+    {
+
+        alerts.push(
+            "MQ135 AIR QUALITY HIGH"
+        );
+
+    }
+
+
+    const container =
+        document.getElementById(
+            "alerts"
+        );
+
+
+    container.innerHTML = "";
+
+
+    // No alerts
+
+    if (
+        alerts.length === 0
+    )
+    {
+
+        container.innerHTML =
+
+            `
+            <div class="safe-box">
+
+                ✓ SYSTEM SAFE
+
+            </div>
+            `;
+
+    }
+
+
+    // Alerts
+
+    else
+    {
+
+        alerts.forEach(
+            function(alert)
+            {
+
+                const div =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                div.className =
+                    "alert-box";
+
+
+                div.textContent =
+                    "⚠ " + alert;
+
+
+                container.appendChild(
+                    div
+                );
+
+            }
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// OFFLINE
+// =====================================================
+
+client.on(
+    "offline",
+    function()
+    {
+
+        const status =
+            document.getElementById(
+                "mqttStatus"
+            );
+
+
+        status.textContent =
+            "● MQTT DISCONNECTED";
+
+
+        status.className =
+            "connection disconnected";
+
+    }
+);
+
+
+// =====================================================
+// ERROR
+// =====================================================
+
+client.on(
+    "error",
+    function(error)
+    {
+
+        console.error(
+            "MQTT error:",
+            error
+        );
+
+    }
+);
+
+</script>
+
+
+</body>
+
+</html>
